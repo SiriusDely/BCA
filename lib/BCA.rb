@@ -3,13 +3,17 @@ require "curb"
 require "nokogiri"
 
 module BCA
-  BASE_URL = "https://www.pancasila.co".freeze
+
+  USER_AGENT = "BCA-#{VERSION}"
+  # BASE_URL = "https://www.pancasila.co".freeze
+  BASE_URL = "https://ibank.klikbca.com".freeze
 
   class Client
 
     def initialize(username, password)
       @username = username
       @password = password
+      @cookies = []
     end
 
     def hi
@@ -47,6 +51,47 @@ module BCA
 
       p curl.body_str
       p cookies
-     end
+    end
+
+    def login
+      curl = Curl::Easy.new("#{BASE_URL}/authentication.do")
+      curl.headers["User-Agent"] = USER_AGENT
+      # curl.verbose = true
+
+      @cookies = []
+      curl.on_header { |header|
+        p header
+        @cookies << "#{$1}=#{$2}" if header =~ /^Set-Cookie: ([^=]+)=([^;]+)/
+        header.length
+      }
+
+      curl.http_post(
+        Curl::PostField.content("value(actions)", "login"),
+        Curl::PostField.content("value(user_id)", @username),
+        Curl::PostField.content("value(pswd)", @password),
+        # Curl::PostField.content("value(user_ip)", "111.94.26.135"),
+        # Curl::PostField.content("value(mobile)", "false"),
+        Curl::PostField.content("value(Submit)", "LOGIN")
+      )
+
+      # p curl.body_str
+      p @cookies
+    end
+
+    def welcome
+      curl = Curl::Easy.new("#{BASE_URL}/authentication.do?value(actions)=welcome")
+      curl.headers["User-Agent"] = USER_AGENT
+      curl.cookies = @cookies.join(";")
+      curl.http_get
+      p curl.body_str
+    end
+
+    def logout
+      curl = Curl::Easy.new("#{BASE_URL}/authentication.do?value(actions)=logout")
+      curl.headers["User-Agent"] = USER_AGENT
+      curl.cookies = @cookies.join(";")
+      curl.http_get
+      # p curl.body_str
+    end
   end
 end
