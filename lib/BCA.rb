@@ -16,43 +16,6 @@ module BCA
       @cookies = []
     end
 
-    def hi
-      curl = Curl::Easy.new("#{BASE_URL}/adminlogin/")
-
-      cookies = []
-      curl.on_header { |header|
-        cookies << "#{$1}=#{$2}" if header =~ /^Set-Cookie: ([^=]+)=([^;]+)/
-        header.length
-      }
-
-      curl.perform
-      p curl.body_str
-      p cookies
-
-      html_doc = Nokogiri::HTML(curl.body_str)
-      csrfmiddlewaretoken_element = html_doc.xpath("//*[@name='csrfmiddlewaretoken']")
-      csrfmiddlewaretoken = csrfmiddlewaretoken_element.attr("value").value
-
-      curl.cookies = cookies.join(";")
-      cookies = []
-
-      curl.http_post(
-        Curl::PostField.content("username", @username),
-        Curl::PostField.content("password", @password),
-        Curl::PostField.content("csrfmiddlewaretoken", csrfmiddlewaretoken)
-      )
-
-      p curl.body_str
-      p cookies
-
-      curl.url = "#{BASE_URL}/admin"
-      curl.cookies = cookies.join(";")
-      curl.http_get
-
-      p curl.body_str
-      p cookies
-    end
-
     def login
       curl = Curl::Easy.new("#{BASE_URL}/authentication.do")
       curl.headers["User-Agent"] = USER_AGENT
@@ -75,7 +38,7 @@ module BCA
       )
 
       # p curl.body_str
-      p @cookies
+      # p @cookies
     end
 
     def welcome
@@ -96,7 +59,18 @@ module BCA
       html.xpath("//table/tr").each do |tr|
         lines << tr.text.gsub(/[\n]+/, "").strip.gsub(",", ".").gsub(/[ ]{2,}/, ",")
       end
-      print lines.join("\n")
+      lines.join("\n")
+    end
+
+    def statement_download
+      curl = Curl::Easy.new("#{BASE_URL}/stmtdownload.do?value(actions)=account_statement")
+      curl.headers["User-Agent"] = USER_AGENT
+      curl.cookies = @cookies.join(";")
+      curl.http_post(
+        Curl::PostField.content("value(r1)", "2"),
+        Curl::PostField.content("value(x)", "1")
+      )
+      curl.body_str
     end
 
     def logout
