@@ -4,7 +4,7 @@ require "nokogiri"
 
 module BCA
 
-  USER_AGENT = "BCA-#{VERSION}"
+  USER_AGENT = "BCA-#{VERSION}.gem"
   # BASE_URL = "https://www.pancasila.co".freeze
   BASE_URL = "https://ibank.klikbca.com".freeze
 
@@ -60,7 +60,7 @@ module BCA
 
       @cookies = []
       curl.on_header { |header|
-        p header
+        # p header
         @cookies << "#{$1}=#{$2}" if header =~ /^Set-Cookie: ([^=]+)=([^;]+)/
         header.length
       }
@@ -83,7 +83,20 @@ module BCA
       curl.headers["User-Agent"] = USER_AGENT
       curl.cookies = @cookies.join(";")
       curl.http_get
-      p curl.body_str
+      curl.body_str[/[^>]*(?<=\, Selamat Datang Di Internet Banking BCA)/]
+    end
+
+    def balance_inquiry
+      curl = Curl::Easy.new("#{BASE_URL}/balanceinquiry.do")
+      curl.headers["User-Agent"] = USER_AGENT
+      curl.cookies = @cookies.join(";")
+      curl.http_post
+      html = Nokogiri::HTML(curl.body_str)
+      lines = []
+      html.xpath("//table/tr").each do |tr|
+        lines << tr.text.gsub(/[\n]+/, "").strip.gsub(",", ".").gsub(/[ ]{2,}/, ",")
+      end
+      print lines.join("\n")
     end
 
     def logout
