@@ -1,0 +1,13 @@
+AllCops:
+  DisplayCopNames: true
+  DisplayStyleGuide: true
+  ExtraDetails: true
+
+Style/FileName:
+  Severity: warning
+
+Style/ClassAndModuleChildren:
+  Enabled: false
+
+Style/Documentation:
+  Severity: warning
