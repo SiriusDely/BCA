@@ -13,7 +13,6 @@ module BCA
     def initialize(username, password)
       @username = username
       @password = password
-      @cookies = []
     end
 
     def login
@@ -37,11 +36,25 @@ module BCA
         Curl::PostField.content("value(Submit)", "LOGIN")
       )
 
-      # p curl.body_str
-      # p @cookies
+      if curl.response_code != 200
+        message = "#{$1}" if curl.body_str =~ /<title>(.+?)<\/title>/
+      else
+        message = "#{$1}" if curl.body_str =~  /var err=\s*'([^';]*)/
+      end
+
+      if message
+        @cookies = nil
+        [false, message]
+      else
+        [true, "Successfully logged in"]
+      end
     end
 
     def welcome
+      if @coookies.nil?
+        return nil
+      end
+
       curl = Curl::Easy.new("#{BASE_URL}/authentication.do?value(actions)=welcome")
       curl.headers["User-Agent"] = USER_AGENT
       curl.cookies = @cookies.join(";")
@@ -50,6 +63,10 @@ module BCA
     end
 
     def balance_inquiry
+      if @coookies.nil?
+        return nil
+      end
+
       curl = Curl::Easy.new("#{BASE_URL}/balanceinquiry.do")
       curl.headers["User-Agent"] = USER_AGENT
       curl.cookies = @cookies.join(";")
@@ -63,6 +80,10 @@ module BCA
     end
 
     def statement_download
+      if @coookies.nil?
+        return nil
+      end
+
       curl = Curl::Easy.new("#{BASE_URL}/stmtdownload.do?value(actions)=account_statement")
       curl.headers["User-Agent"] = USER_AGENT
       curl.cookies = @cookies.join(";")
@@ -74,10 +95,15 @@ module BCA
     end
 
     def logout
+      if @coookies.nil?
+        return nil
+      end
+
       curl = Curl::Easy.new("#{BASE_URL}/authentication.do?value(actions)=logout")
       curl.headers["User-Agent"] = USER_AGENT
       curl.cookies = @cookies.join(";")
       curl.http_get
+      @cookies = nil
       # p curl.body_str
     end
   end
